@@ -1,0 +1,93 @@
+---
+title: "streetlight_sna_plots"
+author: "Drew Walker"
+date: "9/30/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(igraph)
+```
+# SNA 
+
+```{r, alter_list}
+alter_list <- read_csv("alter_attributes_SL.csv")
+alter_list <- alter_list %>% 
+  select(-X6,-X7)%>% 
+  filter(!is.na(ego_ID))
+
+edges_raw <- alter_list %>% select(from=alter_ID,to=ego_ID,weight=alter.clo)
+
+
+nodes_vols <- edges_raw %>% 
+  mutate(ego_ID = paste0("Vol",from)) %>% 
+  distinct(ego_ID)
+
+edges <- edges_raw %>%
+  mutate(alter_ID2 = paste0("Vol",from)) %>% select(from=alter_ID2,to,weight)
+
+
+nodes <- alter_list %>% 
+  select(ego_ID) %>% 
+  distinct(ego_ID) %>% 
+  rbind(nodes_vols)
+
+
+#Filter for a patient
+edges_1 <- edges %>% 
+  filter(to == 1)
+
+nodes_1_vols <- alter_list %>% 
+  filter(ego_ID ==1) %>% 
+  mutate(alter_ID2 = paste0("Vol",alter_ID)) %>% 
+  distinct(alter_ID2) %>% 
+  select(ego_ID = alter_ID2)
+nodes_1 <- alter_list %>% 
+  filter(ego_ID == 1) %>% 
+  distinct(ego_ID) %>% 
+  rbind(nodes_1_vols)
+
+
+
+
+
+g <- graph_from_data_frame(d=edges_1, vertices=nodes_1, directed=FALSE)
+
+V(g)$color <- "blue"
+V(g)$color <-  ifelse(V(g)$name != 1, "grey", V(g)$color)
+
+normalize_01 <- function(x) (x - min(x)) / (max(x) - min(x)) + 0.25
+V(g)$size <- normalize_01((E(g)$weight))*10
+
+jpeg("CF_patient_graph.jpg", 
+     width=6.8, height=6.8, 
+     units='in',res=300)
+plot.igraph(g, 
+            asp = 0,
+            main = "Graph of CF Patient" ,
+            vertex.label.cex = .40,
+     layout = layout_with_fr
+     ) 
+dev.off()
+
+plot.igraph(g,asp = 0, main = "Graph of CF Patient" , vertex.label.cex = .40, layout = layout_with_fr) # change edge color to grey)
+
+```
+
+# Alter primacy
+
+* Does being one of the first volunteers to meet a patient impact the number of repeat visits?
+
+* Model is not significant but interesting negative beta/ close sig level
+
+```{r, alter_list}
+alter_primacy_model <- lm (alter_num ~ alter.clo, data =alter_list)    #This model adds in the covariate effect of th
+summary(alter_primacy_model)
+```
+
+
+
