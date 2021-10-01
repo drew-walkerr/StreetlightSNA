@@ -4,13 +4,18 @@ author: "Drew Walker"
 date: "9/30/2021"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(igraph)
+library(network)
+library(sna)
+library(ggraph)
+library(egor)
+
 ```
 # SNA 
 
@@ -57,6 +62,7 @@ nodes_1 <- alter_list %>%
 
 g <- graph_from_data_frame(d=edges_1, vertices=nodes_1, directed=FALSE)
 
+V(g)$label <- ifelse(E(g)$weight>=10, V(g)$name, NA)
 V(g)$color <- "blue"
 V(g)$color <-  ifelse(V(g)$name != 1, "grey", V(g)$color)
 
@@ -89,5 +95,104 @@ alter_primacy_model <- lm (alter_num ~ alter.clo, data =alter_list)    #This mod
 summary(alter_primacy_model)
 ```
 
+
+# Egocentric network analysis with inter-volunteer connections
+
+```{r, inter-vol}
+library(readxl)
+
+# https://github.com/rstudio/cheatsheets/blob/master/data-import.pdf
+#issue here with loading in-- Error: Can't combine `..1$VOL ID` <character> and `..5$VOL ID` <double>.
+path <- "Volunteer Visit records.xlsx"
+#all patients <- path %>%  excel_sheets() %>% 
+  set_names() %>% 
+  map_dfr(read_excel, path = path)
+
+one_patient <- read_excel(path,sheet = "Patient 18")
+
+one_patient_clean <- one_patient %>% 
+  select(`Date of volunteer visits`,`VOL ID`,`VOL NAME`) %>% 
+  mutate(visit_ID = 1:nrow(one_patient),
+         volunteer = strsplit(trimws(as.character(`VOL NAME`)), ",")) %>%
+  unnest(volunteer) %>% 
+  mutate(volunteer_clean = trimws(volunteer)) %>% 
+  select(-`VOL ID`)
+
+unique_vols <- one_patient_clean %>% 
+  distinct(volunteer_clean) %>% 
+  mutate(vol_ID = 1:nrow(unique_vols))
+
+one_patient_clean_vol_id <- left_join(one_patient_clean,unique_vols,by = "volunteer_clean") %>% 
+  mutate(ego_ID = 18) 
+
+alter_alter_list <- one_patient_clean_vol_id %>% mutate(visit_together = 1) %>%
+  mutate(vol_ID2 = vol_ID) %>% 
+  pivot_wider(names_from = vol_ID,values_from=visit_together) %>% 
+  group_by(visit_ID) %>% 
+  fill(everything()) %>% 
+  ungroup() 
+
+alter_adj_matrix <- alter_alter_list[c(6:ncol(alter_alter_list))] 
+
+
+alter_ties <- alter_adj_matrix %>% 
+  group_by(vol_ID2) %>% 
+  summarise(across(where(is.numeric),~ sum(.x,na.rm = TRUE)))
+
+adj_clean <- alter_ties %>%  mutate_all(as.double) 
+
+library(data.table)
+fwrite(adj_clean,"some.name.temp")
+dfm <- fread("some.name.temp",colClasses="double")
+str(dfm)
+
+m <- as.matrix(dfm, rownames = TRUE)
+
+
+ig <- graph_from_adjacency_matrix(m,mode = "undirected", weighted=TRUE,diag=F)
+ig
+
+
+#3 egor objects
+
+#ego list
+ego_list <- read_csv("Patient Ego List Final for SPSS.csv") %>% filter(`EGO Number` == 18)
+ego_list <- ego_list %>% 
+  mutate(across(where(is.character), as.factor)) %>% 
+  rename(ego_ID = `EGO Number`)
+
+
+# alter ties and attr
+alter_attr <- alter_alter_list %>% 
+  group_by(vol_ID2) %>% 
+  summarise(weight = n(),
+            ego_ID = ego_ID) %>% 
+  distinct()
+alter_attr %>%  
+  mutate(across(where(is.character), as.factor))
+# alter-ties list
+
+tie_list <- get.data.frame(ig) %>% 
+  mutate(ego_ID = 18)
+egor.obj <- egor::threefiles_to_egor(egos = ego_list, 
+                               alters.df = alter_attr, 
+                               edges = tie_list, 
+                               ID.vars = list(ego = "ego_ID", 
+                                              alter = "vol_ID2", 
+                                              source = "from", 
+                                              target = "to"))
+egor.obj
+ego_density(egor.obj)
+egor::
+egor_vis_app(egor.obj)
+
+library(igraph)
+set.seed(607)
+ggraph(ig) + 
+  geom_edge_link() + # Draw edges
+  geom_node_point(size=5, color="blue") + # Draw nodes
+  theme_graph(base_family = 'Helvetica')
+
+```
 
 
