@@ -11,6 +11,8 @@ library(tidyverse)
 library(stargazer)
 library(table1)
 library(ggpubr)
+library("Hmisc")
+
 
 ```
 
@@ -25,6 +27,15 @@ gender_difference <- lm(network_size ~ total_los+gender, data =sna_ego_list_for_
 
 density_and_repeat_visits <- lm(avg_alter_freq ~ total_los+gender, data =sna_ego_list_for_model)
 summary(density_and_repeat_visits)
+
+sna_ego_list_corr <- sna_ego_list_for_model %>% 
+  select(network_size,avg_alter_freq,max_alter_freq,age,days_in_SL,total_los,max_los,visits_per_admission,total_admissions,total_visits,density) %>% 
+  drop_na()
+
+
+
+corr_matrix <- rcorr(as.matrix(sna_ego_list_corr),type=c("pearson"))
+
 
 ```
 
