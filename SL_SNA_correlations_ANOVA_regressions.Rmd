@@ -1,0 +1,30 @@
+---
+title: "SL_SNA_correlations_ANOVA_regressions"
+author: "Drew Walker"
+date: "10/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(stargazer)
+library(table1)
+library(ggpubr)
+
+```
+
+
+```{r}
+sna_ego_list_for_model <- read_csv("sna_ego_list.csv")
+
+network_size_age <- lm(network_size ~ total_los+ project_team, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(network_size_age)
+
+gender_difference <- lm(network_size ~ total_los+gender, data =sna_ego_list_for_model)
+
+density_and_repeat_visits <- lm(avg_alter_freq ~ total_los+gender, data =sna_ego_list_for_model)
+summary(density_and_repeat_visits)
+
+```
+
