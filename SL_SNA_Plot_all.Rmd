@@ -10,13 +10,15 @@ editor_options:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-library(igraph)
 library(network)
+library(igraph)
+library(ergm)
 library(sna)
+library(statnet)
+library(intergraph)
 library(ggraph)
 library(egor)
 library(readxl)
-library(XLConnect)
 
 ```
 # SNA 
@@ -163,54 +165,94 @@ ig
 
 #3 egor objects
 
-#ego list
+#1. ego list object
 ego_list <- read_csv("Patient Ego List Final for SPSS.csv")
 ego_list <- ego_list %>% 
   mutate(across(where(is.character), as.factor)) %>% 
   rename(ego_ID = `EGO Number`)
 
 
-# alter ties and attr
+#2. Creating Alter Attributes Object of ego_ID, alter_ID, and weight of visits to each Ego
 alter_attr <- alter_alter_list %>% 
+  filter(ego_ID %in% unique_ego_list$ego_ID) %>% 
+  select(ego_ID,vol_ID2,volunteer_clean) %>% 
   group_by(vol_ID2) %>% 
   summarise(weight = n(),
-            ego_ID = ego_ID) %>% 
-  distinct() %>% 
-  ungroup() %>% 
-  filter(ego_ID != "Austin") 
+            ego_ID = ego_ID,
+            volunteer_clean = volunteer_clean) %>% 
+  distinct(vol_ID2,.keep_all = TRUE) %>% 
+  ungroup()
 unique_ego_alter_attr <- alter_attr %>% 
   distinct(ego_ID)
 unique_ego_list <- ego_list %>% 
   distinct(ego_ID)
-alter_attr <- alter_alter_list %>% 
-  filter(ego_ID %in% unique_ego_list$ego_ID)
+
+
+alter_attr$ego_ID <- as.numeric(alter_attr$ego_ID)
 # alter-ties list
 tie_list <- get.data.frame(ig) 
 tie_merge_vols <- unique_vols %>% 
   rename(from = vol_ID) 
 tie_merge_vols$from <- as.character(tie_merge_vols$from)
 tie_list_2 <- left_join(tie_list,tie_merge_vols,by= "from") %>%
-  select(-volunteer_clean,ego_ID,from,to,weight) %>% 
-  filter(ego_ID %in% unique_ego_list$ego_ID) 
+  select(-volunteer_clean,ego_ID,from,to,weight) 
 tie_list_2$ego_ID <-  as.double(tie_list_2$ego_ID)
+tie_list_2 <- tie_list_2 %>% 
+  select(from,to,ego_ID,weight) %>% 
+  filter(ego_ID %in% unique_ego_list$ego_ID) 
 ego_list$ego_ID <- as.double(ego_list$ego_ID)
-#Check alter_attr
 
+#Create egor object, containing alter attributes list, ego list, and tie list 
 
-
-egor.obj <- egor::threefiles_to_egor(egos = ego_list, 
-                               alters.df = alter_attr, 
+egor.obj <- egor::threefiles_to_egor(alters = alter_attr, 
+                                     egos = ego_list, 
                                edges = tie_list_2, 
                                ID.vars = list(ego = "ego_ID", 
-                                              alter = "vol_ID2", 
+                                              alter ="vol_ID2",
                                               source = "from", 
                                               target = "to"))
+
 egor.obj
-gr.list <- egor::as_igraph(egor.obj)
-ego_density(egor.obj)
+
+gr.list <- summary(egor.obj)
+density_tibble <- ego_density(egor.obj) 
+density_tibble$.egoID <- as.double(density_tibble$.egoID)
+
+sna_ego_list <- left_join(ego_list,density_tibble,by=c("ego_ID"=".egoID"))
+
+sna_ego_list_for_model <- sna_ego_list %>% 
+  select(ego_ID,
+         network_size=`Network Size`,
+         avg_alter_freq=`RQ 4Average alter closeness`,
+         max_alter_freq=`RQ4alter closeness max`,
+         sd_alter_freq=`RQ 4Alter Closeness SD`,
+         med_alter_freq=`RQ4alter median closeness`,
+         project_team=`RQ5 Project Team`,
+         gender=Gender,
+         deceased=Deceased,
+         age=Age,
+         days_in_SL=`RQ1 Time in SL`,
+         avg_los=`RQ1 Average LOS`,
+         total_los=`RQ1Total LOS`,
+         max_los=`RQ1 Max LOS`,
+         visits_per_admission=`RQ2 VISITS PER ADMISSION`,
+         total_admissions=`RQ1 Total Admissions`,
+         total_visits=`RQ1Total Visits`,
+         density,
+         dpp=`DPP?`)
+
+write_csv(sna_ego_list_for_model,"sna_ego_list")
+
+
 egor::egor_vis_app(egor.obj)
 
+names(egor.obj$alter)
 
+save(egor.obj, ego_list,alter_attr,tie_list_2, file="SL_SNA_egor.rda")
+egor::count_dyads(egor.obj,".alt_ID",return_as = "long")
+
+
+#edit name list for a few entries-- see PDF output for directors
 ```
 
 
