@@ -15,6 +15,8 @@ library(network)
 library(sna)
 library(ggraph)
 library(egor)
+library(readxl)
+library(XLConnect)
 
 ```
 # SNA 
@@ -103,12 +105,9 @@ library(readxl)
 
 # https://github.com/rstudio/cheatsheets/blob/master/data-import.pdf
 #issue here with loading in-- Error: Can't combine `..1$VOL ID` <character> and `..5$VOL ID` <double>.
-path <- "Volunteer Visit records.xlsx"
-#all patients <- path %>%  excel_sheets() %>% 
-  set_names() %>% 
-  map_dfr(read_excel, path = path)
 
-one_patient <- read_excel(path,sheet = "Patient 18")
+
+one_patient <- read_excel(path,sheet = "Patient 19",col_types="text")
 
 one_patient_clean <- one_patient %>% 
   select(`Date of volunteer visits`,`VOL ID`,`VOL NAME`) %>% 
@@ -193,6 +192,24 @@ ggraph(ig) +
   geom_node_point(size=5, color="blue") + # Draw nodes
   theme_graph(base_family = 'Helvetica')
 
+
+read_all <- function(path, ...) {
+
+  path %>%
+    readxl::excel_sheets() %>%
+    rlang::set_names() %>%
+    purrr::map_df(function(x) {
+                      readxl::read_excel(path = path, sheet = x, ...)
+                   })
+
+}
+all_patients <- read_all(path,col_types = "text")
+
+
+path <- "Volunteer Visit SNA.xlsx"
+all_patients <- path %>%  excel_sheets() %>% 
+  set_names() %>% 
+  map_dfr(my_read_excel, path=path)
 ```
 
 
