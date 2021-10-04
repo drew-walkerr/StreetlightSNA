@@ -230,7 +230,7 @@ diversity_entropy$.egoID<-  as.double(diversity_entropy$.egoID)
 
 sna_ego_list_diversity <- left_join(sna_ego_list,diversity_entropy, by =c("ego_ID"=".egoID"))
 
-sna_ego_list_for_model <- sna_ego_list_diversity %>% 
+sna_ego_list_for_model <- sna_ego_list %>% 
   select(ego_ID,
          network_size=`Network Size`,
          avg_alter_freq=`RQ 4Average alter closeness`,
@@ -264,11 +264,6 @@ save(egor.obj, ego_list,alter_attr,tie_list_2, file="SL_SNA_egor.rda")
 #edit name list for a few entries-- see PDF output for directors
 ```
 
-```{r, egor_diversity}
-
-
-
-```
 
 egor vis
 ```{r, shiny_vis}
