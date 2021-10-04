@@ -171,7 +171,8 @@ ego_list <- ego_list %>%
   mutate(across(where(is.character), as.factor)) %>% 
   rename(ego_ID = `EGO Number`)
 
-
+unique_ego_list <- ego_list %>% 
+  distinct(ego_ID)
 #2. Creating Alter Attributes Object of ego_ID, alter_ID, and weight of visits to each Ego
 alter_attr <- alter_alter_list %>% 
   filter(ego_ID %in% unique_ego_list$ego_ID) %>% 
@@ -182,10 +183,14 @@ alter_attr <- alter_alter_list %>%
             volunteer_clean = volunteer_clean) %>% 
   distinct(vol_ID2,.keep_all = TRUE) %>% 
   ungroup()
+
+
 unique_ego_alter_attr <- alter_attr %>% 
   distinct(ego_ID)
-unique_ego_list <- ego_list %>% 
-  distinct(ego_ID)
+
+
+
+
 
 
 alter_attr$ego_ID <- as.numeric(alter_attr$ego_ID)
@@ -220,7 +225,12 @@ density_tibble$.egoID <- as.double(density_tibble$.egoID)
 
 sna_ego_list <- left_join(ego_list,density_tibble,by=c("ego_ID"=".egoID"))
 
-sna_ego_list_for_model <- sna_ego_list %>% 
+diversity_entropy <- egor::alts_diversity_entropy(egor.obj,"weight")
+diversity_entropy$.egoID<-  as.double(diversity_entropy$.egoID)
+
+sna_ego_list_diversity <- left_join(sna_ego_list,diversity_entropy, by =c("ego_ID"=".egoID"))
+
+sna_ego_list_for_model <- sna_ego_list_diversity %>% 
   select(ego_ID,
          network_size=`Network Size`,
          avg_alter_freq=`RQ 4Average alter closeness`,
@@ -239,20 +249,30 @@ sna_ego_list_for_model <- sna_ego_list %>%
          total_admissions=`RQ1 Total Admissions`,
          total_visits=`RQ1Total Visits`,
          density,
-         dpp=`DPP?`)
+         dpp=`DPP?`,
+         entropy)
 
-write_csv(sna_ego_list_for_model,"sna_ego_list")
+
+write_csv(sna_ego_list_for_model,"sna_ego_list.csv")
 
 
-egor::egor_vis_app(egor.obj)
 
 names(egor.obj$alter)
 
 save(egor.obj, ego_list,alter_attr,tie_list_2, file="SL_SNA_egor.rda")
-egor::count_dyads(egor.obj,".alt_ID",return_as = "long")
-
 
 #edit name list for a few entries-- see PDF output for directors
 ```
 
+```{r, egor_diversity}
+
+
+
+```
+
+egor vis
+```{r, shiny_vis}
+egor::egor_vis_app(egor.obj)
+
+```
 

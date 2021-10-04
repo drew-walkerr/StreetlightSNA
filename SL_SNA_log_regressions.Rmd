@@ -1,0 +1,467 @@
+---
+title: "SL_SNA_log_regressions"
+author: "Drew Walker"
+date: "10/3/2021"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(stargazer)
+library(table1)
+library(ggpubr)
+library("Hmisc")
+library(psych)
+
+```
+
+
+
+```{r,data_prep}
+#read data 
+sna_ego_list_for_model <- read_csv("sna_ego_list.csv")
+#factors 
+factor_vars <- c("deceased", "dpp", "project_team", "gender")
+sna_ego_list_for_model<- sna_ego_list_for_model %>% 
+       mutate_each_(funs(factor(.)),factor_vars) %>% 
+  mutate(log_total_los = log(total_los),#predictors
+         log_days_in_SL = log(days_in_SL),
+         log_total_admissions = log(total_admissions),
+         log_network_size = log(network_size),
+         log_avg_alter_freq = log(avg_alter_freq),
+         log_total_visits = log(total_visits),
+         log_density= log(density))
+
+
+str(sna_ego_list_for_model)
+#age as number
+sna_ego_list_for_model$age <- as.numeric(sna_ego_list_for_model$age)
+```
+# Model details:
+## Outcomes :  
+* Network Size (network_size)
+* * Log network size (log_network_size)
+* Repeated Vol Visits (avg_alter_freq)
+* * Log avg_alter_freq = log_avg_alter_freq
+* Network Density (density)
+* * log_density
+* Total SL Visits (total_visits)
+* * log_total_visits
+
+## Predictors
+* Age (age)
+* Length of stay (total_los)
+* * log_total_los
+* Total number of admissions (total_admissions)
+* * log_total_admissions
+* Network density (density)
+* * log_density
+* Deceased (deceased), if patient passed after study recruitment
+* Designated Palliative Patient Status (dpp): status indicated by Streetlight program for patients in major disease populations (not other) patients who have been admitted 3x or more, or patients who are followed by pal care team
+* Project Team
+* Gender
+
+
+## Covariates for adjusted models
+* After finding significance for most models incoprorating total LOS and Hospital admissions for outcomes, we ran additional models adjusting for total length of stay and hospital admissions
+
+# EDA 
+
+## outcome distributions
+```{r, describe_vars}
+outcomes <- sna_ego_list_for_model %>% 
+  select(network_size,avg_alter_freq,total_visits,density)
+outcomes_plot <- hist.data.frame(outcomes, na.big = TRUE)
+
+hist(outcomes$density,breaks=10)
+```
+
+```{r, predictor_plots}
+predictors <- sna_ego_list_for_model %>% 
+  select(age,gender,deceased,dpp,project_team,days_in_SL,total_admissions,total_los)
+predictor_plot <- hist.data.frame(predictors)
+
+predictors_log <- predictors %>% 
+  mutate(log_total_los = log(total_los),
+         log_days_in_SL = log(days_in_SL),
+         log_total_admissions = log(total_admissions))
+
+hist.data.frame(predictors_log)
+
+
+
+hist(predictors_log$log_total_los)
+
+# 1 age missing
+# 1 female category
+# change none 
+```
+# Crude linear models for outcome log network size
+```{r,log_network_size_models}
+#Crude models
+#log_network_size_models
+log_network_size_age_crude <- lm(log_network_size ~ age, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+
+summary(log_network_size_age_crude)
+confint(log_network_size_age_crude)
+
+#LOS
+log_network_size_los_crude <- lm(log_network_size ~ log_total_los, data =sna_ego_list_for_model)  
+summary(log_network_size_los_crude)
+confint(log_network_size_los_crude)
+
+#total hospital admissions
+log_network_size_admissions_crude <- lm(log_network_size ~ log_total_admissions, data =sna_ego_list_for_model)  
+summary(log_network_size_admissions_crude)
+confint(log_network_size_admissions_crude)
+
+#log_density super high predictor of network size-- may be colinearity here 
+# It will necessarily become more sparse as number of connections increases
+
+#deceased
+log_network_size_deceased_crude <- lm(log_network_size ~ deceased, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_network_size_deceased_crude)
+confint(log_network_size_deceased_crude)
+#dpp
+log_network_size_dpp_crude <- lm(log_network_size ~ dpp, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_network_size_dpp_crude)
+confint(log_network_size_dpp_crude)
+
+#project_team
+log_network_size_project_team_crude <- lm(log_network_size ~ project_team, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_network_size_project_team_crude)
+
+confint(log_network_size_project_team_crude)
+
+#gender
+log_network_size_gender_crude <- lm(log_network_size ~ gender, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_network_size_gender_crude)
+confint(log_network_size_gender_crude)
+#both predict? that doesn't make sense...
+```
+# Adjusted network size models
+```{r,log_network_size_adjusted}
+####ADJUSTED MODELS#### 
+#log_network_size_models
+log_network_size_age_adjusted <- lm(log_network_size ~ age + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+
+summary(log_network_size_age_adjusted)
+confint(log_network_size_age_adjusted)
+
+#LOS
+log_network_size_los_adjusted <- lm(log_network_size ~ log_total_los  + log_total_admissions, data =sna_ego_list_for_model)  
+summary(log_network_size_los_adjusted)
+confint(log_network_size_los_adjusted)
+
+#network size log_density 
+
+#log_density super high predictor of network size-- may be colinearity here 
+# It will necessarily become more sparse as number of connections increases
+
+#deceased
+log_network_size_deceased_adjusted <- lm(log_network_size ~ deceased + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_network_size_deceased_adjusted)
+confint(log_network_size_deceased_adjusted)
+#dpp
+log_network_size_dpp_adjusted <- lm(log_network_size ~ dpp + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_network_size_dpp_adjusted)
+confint(log_network_size_dpp_adjusted)
+
+#project_team
+log_network_size_project_team_adjusted <- lm(log_network_size ~ project_team + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_network_size_project_team_adjusted)
+confint(log_network_size_project_team_adjusted)
+
+#gender
+log_network_size_gender_adjusted <- lm(log_network_size ~ gender + log_total_los  + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_network_size_gender_adjusted)
+confint(log_network_size_gender_adjusted)
+#both predict? that doesn't make sense...
+```
+
+# Crude linear models for outcome repeat visits
+```{r, llm for repeated visits}
+#Crude models
+#log_avg_alter_freq_models
+log_avg_alter_freq_age_crude <- lm(log_avg_alter_freq ~ age, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+
+summary(log_avg_alter_freq_age_crude)
+confint(log_avg_alter_freq_age_crude)
+
+#LOS
+log_avg_alter_freq_log_total_los_crude <- lm(log_avg_alter_freq ~ log_total_los, data =sna_ego_list_for_model)  
+summary(log_avg_alter_freq_log_total_los_crude)
+confint(log_avg_alter_freq_log_total_los_crude)
+
+#admissions
+log_avg_alter_freq_admissions_crude <- lm(log_avg_alter_freq ~ log_total_admissions, data =sna_ego_list_for_model)  
+summary(log_avg_alter_freq_admissions_crude)
+confint(log_avg_alter_freq_admissions_crude)
+#network size log_density 
+
+log_avg_alter_freq_log_density_crude <- lm(log_avg_alter_freq ~ log_density, data =subset(sna_ego_list_for_model,density>0))
+
+summary(log_avg_alter_freq_log_density_crude)
+confint(log_avg_alter_freq_log_density_crude)
+
+#log_density super high predictor of network size-- may be colinearity here 
+# It will necessarily become more sparse as number of connections increases
+
+#deceased
+log_avg_alter_freq_deceased_crude <- lm(log_avg_alter_freq ~ deceased, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_avg_alter_freq_deceased_crude)
+confint(log_avg_alter_freq_deceased_crude)
+#dpp
+log_avg_alter_freq_dpp_crude <- lm(log_avg_alter_freq ~ dpp, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_avg_alter_freq_dpp_crude)
+confint(log_avg_alter_freq_dpp_crude)
+
+#project_team
+log_avg_alter_freq_project_team_crude <- lm(log_avg_alter_freq ~ project_team, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_avg_alter_freq_project_team_crude)
+
+confint(log_avg_alter_freq_project_team_crude)
+
+#gender
+log_avg_alter_freq_gender_crude <- lm(log_avg_alter_freq ~ gender, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_avg_alter_freq_gender_crude)
+confint(log_avg_alter_freq_gender_crude)
+#both predict? that doesn't make sense...
+```
+# Adjusted alter frequency models
+```{r,alter_freq_adjusted} 
+#### ADJUSTED MODELS ######
+#log_avg_alter_freq_models
+log_avg_alter_freq_age_adjusted <- lm(log_avg_alter_freq ~ age + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+
+summary(log_avg_alter_freq_age_adjusted)
+confint(log_avg_alter_freq_age_adjusted)
+
+#LOS and admissions
+log_avg_alter_freq_los_adjusted <- lm(log_avg_alter_freq ~ log_total_los  + log_total_admissions, data =sna_ego_list_for_model)  
+summary(log_avg_alter_freq_los_adjusted)
+confint(log_avg_alter_freq_los_adjusted)
+
+
+
+#log_density super high predictor of network size-- may be colinearity here 
+# It will necessarily become more sparse as number of connections increases
+
+#deceased
+log_avg_alter_freq_deceased_adjusted <- lm(log_avg_alter_freq ~ deceased + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_avg_alter_freq_deceased_adjusted)
+confint(log_avg_alter_freq_deceased_adjusted)
+#dpp
+log_avg_alter_freq_dpp_adjusted <- lm(log_avg_alter_freq ~ dpp + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_avg_alter_freq_dpp_adjusted)
+confint(log_avg_alter_freq_dpp_adjusted)
+
+#project_team
+log_avg_alter_freq_project_team_adjusted <- lm(log_avg_alter_freq ~ project_team + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_avg_alter_freq_project_team_adjusted)
+confint(log_avg_alter_freq_project_team_adjusted)
+
+#gender
+log_avg_alter_freq_gender_adjusted <- lm(log_avg_alter_freq ~ gender + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_avg_alter_freq_gender_adjusted)
+confint(log_avg_alter_freq_gender_adjusted)
+#both predict? that doesn't make sense...
+#alter freq and  log_density 
+log_avg_alter_freq_log_density_adjusted <- lm(log_avg_alter_freq ~ log_density + log_total_los + log_total_admissions, data =subset(sna_ego_list_for_model,density>0))
+summary(log_avg_alter_freq_log_density_adjusted)
+confint(log_avg_alter_freq_log_density_adjusted)
+#alter freq and log density, and log network size
+log_avg_alter_freq_log_density_and_network_size_adjusted <- lm(log_avg_alter_freq ~ log_density + log_network_size + log_total_los + log_total_admissions, data =subset(sna_ego_list_for_model,density>0))    #This model adds in the covariate effect of th
+
+
+summary(log_avg_alter_freq_log_density_and_network_size_adjusted)
+confint(log_avg_alter_freq_log_density_and_network_size_adjusted)
+
+```
+# Crude linear models for outcome network log_density
+
+```{r, lm_on_log_density}
+#Crude models
+#log_density_models
+log_density_age_crude <- lm(log_density ~ age, data =subset(sna_ego_list_for_model,density>0))    #This model adds in the covariate effect of th
+
+summary(log_density_age_crude)
+confint(log_density_age_crude)
+
+#LOS
+log_density_log_total_los_crude <- lm(log_density ~ log_total_los, data =subset(sna_ego_list_for_model,density>0))
+summary(log_density_log_total_los_crude)
+confint(log_density_log_total_los_crude)
+
+#admissions
+log_density_admissions_crude <- lm(log_density ~ log_total_admissions, data =subset(sna_ego_list_for_model,density>0))
+summary(log_density_admissions_crude)
+confint(log_density_admissions_crude)
+
+
+#log_density super high predictor of network size-- may be colinearity here 
+# It will necessarily become more sparse as number of connections increases
+
+#deceased
+log_density_deceased_crude <- lm(log_density ~ deceased, data= subset(sna_ego_list_for_model,density>0))    #This model adds in the covariate effect of th
+summary(log_density_deceased_crude)
+confint(log_density_deceased_crude)
+#dpp
+log_density_dpp_crude <- lm(log_density ~ dpp, data =subset(sna_ego_list_for_model,density>0))   #This model adds in the covariate effect of th
+summary(log_density_dpp_crude)
+confint(log_density_dpp_crude)
+
+#project_team
+log_density_project_team_crude <- lm(log_density ~ project_team, data =subset(sna_ego_list_for_model,density>0))#This model adds in the covariate effect of th
+
+summary(log_density_project_team_crude)
+
+confint(log_density_project_team_crude)
+
+# log_density
+
+
+
+#gender
+log_density_gender_crude <- lm(log_density ~ gender, data =subset(sna_ego_list_for_model,density>0))    #This model adds in the covariate effect of th
+summary(log_density_gender_crude)
+confint(log_density_gender_crude)
+#both predict? that doesn't make sense...
+
+```
+# Adjusted network log_density models
+```{r,log_density_adjusted} 
+#### ADJUSTED MODELS ######
+#log_density_models
+log_density_age_adjusted <- lm(log_density ~ age + log_total_los + log_total_admissions, data =subset(sna_ego_list_for_model,density>0))   #This model adds in the covariate effect of th
+
+summary(log_density_age_adjusted)
+confint(log_density_age_adjusted)
+
+#LOS and admissions
+log_density_los_adjusted <- lm(log_density ~ log_total_los  + log_total_admissions, data =subset(sna_ego_list_for_model,density>0)) 
+summary(log_density_los_adjusted)
+confint(log_density_los_adjusted)
+
+# It will necessarily become more sparse as number of connections increases
+
+#deceased
+log_density_deceased_adjusted <- lm(log_density ~ deceased + log_total_los + log_total_admissions, data =subset(sna_ego_list_for_model,density>0))    #This model adds in the covariate effect of th
+summary(log_density_deceased_adjusted)
+confint(log_density_deceased_adjusted)
+#dpp
+log_density_dpp_adjusted <- lm(log_density ~ dpp + log_total_los + log_total_admissions, data =subset(sna_ego_list_for_model,density>0))   #This model adds in the covariate effect of th
+summary(log_density_dpp_adjusted)
+confint(log_density_dpp_adjusted)
+
+#project_team
+log_density_project_team_adjusted <- lm(log_density ~ project_team + log_total_los + log_total_admissions, data =subset(sna_ego_list_for_model,density>0))   #This model adds in the covariate effect of th
+summary(log_density_project_team_adjusted)
+confint(log_density_project_team_adjusted)
+
+#gender
+log_density_gender_adjusted <- lm(log_density ~ gender + log_total_los + log_total_admissions, data =subset(sna_ego_list_for_model,density>0))    #This model adds in the covariate effect of th
+summary(log_density_gender_adjusted)
+confint(log_density_gender_adjusted)
+#both predict? that doesn't make sense...
+
+#log_density_models adjusted for network size
+log_density_log_network_size_crude <- lm(log_density ~ log_network_size, data =subset(sna_ego_list_for_model,density>0))    #This model adds in the covariate effect of th
+
+summary(log_density_log_network_size_crude)
+confint(log_density_log_network_size_crude)
+
+
+
+```
+# Crude linear models for outcome Total SL Visits
+
+```{r, lm_on_log_total_visits}
+#Crude models
+#log_total_visits_models
+log_total_visits_age_crude <- lm(log_total_visits ~ age, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+
+summary(log_total_visits_age_crude)
+confint(log_total_visits_age_crude)
+
+#LOS
+log_total_visits_log_total_los_crude <- lm(log_total_visits ~ log_total_los, data =sna_ego_list_for_model)  
+summary(log_total_visits_log_total_los_crude)
+confint(log_total_visits_log_total_los_crude)
+
+#admissions
+log_total_visits_admissions_crude <- lm(log_total_visits ~ log_total_admissions, data =sna_ego_list_for_model)  
+summary(log_total_visits_admissions_crude)
+confint(log_total_visits_admissions_crude)
+
+#log_total_visits super high predictor of network size-- may be colinearity here 
+# It will necessarily become more sparse as number of connections increases
+
+#deceased
+log_total_visits_deceased_crude <- lm(log_total_visits ~ deceased, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_deceased_crude)
+confint(log_total_visits_deceased_crude)
+#dpp
+log_total_visits_dpp_crude <- lm(log_total_visits ~ dpp, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_dpp_crude)
+confint(log_total_visits_dpp_crude)
+
+#project_team
+log_total_visits_project_team_crude <- lm(log_total_visits ~ project_team, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_project_team_crude)
+
+confint(log_total_visits_project_team_crude)
+
+#gender
+log_total_visits_gender_crude <- lm(log_total_visits ~ gender, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_gender_crude)
+confint(log_total_visits_gender_crude)
+#both predict? that doesn't make sense...
+
+
+
+```
+# Adjusted total SL visit models
+```{r,total_sl_adjusted} 
+#### ADJUSTED MODELS ######
+#log_total_visits_models
+log_total_visits_age_adjusted <- lm(log_total_visits ~ age + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of total admissions and los
+
+summary(log_total_visits_age_adjusted)
+confint(log_total_visits_age_adjusted)
+
+#LOS and admissions
+log_total_visits_los_adjusted <- lm(log_total_visits ~ log_total_los  + log_total_admissions, data =sna_ego_list_for_model)  
+summary(log_total_visits_los_adjusted)
+confint(log_total_visits_los_adjusted)
+
+
+#deceased
+log_total_visits_deceased_adjusted <- lm(log_total_visits ~ deceased + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_deceased_adjusted)
+confint(log_total_visits_deceased_adjusted)
+#dpp
+log_total_visits_dpp_adjusted <- lm(log_total_visits ~ dpp + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_dpp_adjusted)
+confint(log_total_visits_dpp_adjusted)
+
+#project_team
+log_total_visits_project_team_adjusted <- lm(log_total_visits ~ project_team + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_project_team_adjusted)
+confint(log_total_visits_project_team_adjusted)
+
+#gender
+log_total_visits_gender_adjusted <- lm(log_total_visits ~ gender + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_gender_adjusted)
+confint(log_total_visits_gender_adjusted)
+#log density
+# This may be tied to the fact that each visit is a chance for a tie to be made, so more visits = higher denominator of volunteers + also higher chance at co-visits so unsure what to make
+log_total_visits_log_density_adjusted <- lm(log_total_visits ~ log_density + log_total_los + log_total_admissions, data =subset(sna_ego_list_for_model,density>0))
+summary(log_total_visits_log_density_adjusted)
+confint(log_total_visits_log_density_adjusted)
+
+```
+Interpretation guide for betas
+https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqhow-do-i-interpret-a-regression-model-when-some-variables-are-log-transformed/
