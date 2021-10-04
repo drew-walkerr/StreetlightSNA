@@ -29,6 +29,8 @@ library(psych)
 
 -   Repeated Vol Visits (avg_alter_freq)
 
+    -   frequency of repeated contact considered to be an important aspect of strong tie formation within friendship networks [@walker1993] , and while not directly indicative of relationship quality, many have theorized processes of bond development occurring from greater frequency of contact
+
     -   "Granovetter's 'strength of weak ties' argument concludes that weak ties provide better connections to different social mileus because they connect socially dissimilar people. Greater range within a network (size and heterogeneity, lower density), more access to diverse sources of support, and greater availability of support
 
     -   Closeness of relationships persisted in its association with support perceptions and satisfaction. [@vaux1985]
@@ -64,40 +66,7 @@ library(psych)
 
 -   After finding significance for most models incoprorating total LOS and Hospital admissions for outcomes, we ran additional models adjusting for total length of stay and hospital admissions
 
-# EDA
-
-## outcome distributions
-
-```{r, describe_vars}
-describe(sna_ego_list_for_model)
-
-outcomes <- sna_ego_list_for_model %>% 
-  select(network_size,avg_alter_freq,total_visits,density)
-outcomes_plot <- hist.data.frame(outcomes, na.big = TRUE)
-
-hist(outcomes$density,breaks=10)
-```
-
-```{r, predictor_plots}
-predictors <- sna_ego_list_for_model %>% 
-  select(age,gender,deceased,dpp,project_team,days_in_SL,total_admissions,total_los)
-predictor_plot <- hist.data.frame(predictors)
-
-predictors_log <- predictors %>% 
-  mutate(log_total_los = log(total_los),
-         log_days_in_SL = log(days_in_SL),
-         log_total_admissions = log(total_ad))
-
-hist.data.frame(predictors_log)
-
-
-
-hist(predictors_log$log_total_los)
-
-# 1 age missing
-# 1 female category
-# change none 
-```
+# Data prep
 
 ```{r,data_prep}
 #read data 
@@ -118,6 +87,41 @@ sna_ego_list_for_model<- sna_ego_list_for_model %>%
 str(sna_ego_list_for_model)
 #age as number
 sna_ego_list_for_model$age <- as.numeric(sna_ego_list_for_model$age)
+```
+
+# EDA
+
+## outcome distributions
+
+```{r, describe_vars}
+outcomes <- sna_ego_list_for_model %>% 
+  select(network_size,avg_alter_freq,total_visits,density,entropy)
+outcomes_plot <- hist.data.frame(outcomes, na.big = TRUE)
+
+hist(outcomes$density,breaks=10)
+```
+
+# Predictor plots
+
+```{r, predictor_plots}
+predictors <- sna_ego_list_for_model %>% 
+  select(age,gender,deceased,dpp,project_team,days_in_SL,total_admissions,total_los)
+predictor_plot <- hist.data.frame(predictors)
+
+predictors_log <- predictors %>% 
+  mutate(log_total_los = log(total_los),
+         log_days_in_SL = log(days_in_SL),
+         log_total_admissions = log(total_admissions))
+
+hist.data.frame(predictors_log)
+
+
+
+hist(predictors_log$log_total_los)
+
+# 1 age missing
+# 1 female category
+# change none 
 ```
 
 # Crude linear models for outcome network size
@@ -498,13 +502,7 @@ confint(total_visits_gender_adjusted)
 
 # Literature on network characteristics and social support
 
-Networks of small size, strong ties, high density, high homogeneity, and
-low dispersion appear to be helpful in maintaining social identity and
-hence health and well-being outcomes when these are promoted by
-maintenance of the networks. However, change in social roles and
-identities, and hence health and well-being during such change, is
-facilitated by larger networks with weaker ties, lower density, and
-greater social and cultural heterogeneity [26], [27], [40], [48]--[49][50][51]. [@hemmati2014]
+Networks of small size, strong ties, high density, high homogeneity, and low dispersion appear to be helpful in maintaining social identity and hence health and well-being outcomes when these are promoted by maintenance of the networks. However, change in social roles and identities, and hence health and well-being during such change, is facilitated by larger networks with weaker ties, lower density, and greater social and cultural heterogeneity [26], [27], [40], [48]--[49][50][51]. [@hemmati2014]
 
 # Discussion points
 
@@ -512,11 +510,4 @@ greater social and cultural heterogeneity [26], [27], [40], [48]--[49][50][51]. 
 
     -   Need to also measure SGL:
 
-        -   Haythornthwaite ([2005](https://www.tandfonline.com/doi/full/10.1080/10410236.2016.1242032?casa_token=Cs3Ug6AgxgwAAAAA%3AywV4WhQjG-17SbYUy52F1_2-aVznMi-1iPm1qdBWers3M58EosaXMZdTOCpZvUPbt4z3zyda1E-i#)) suggested that communication multiplexity is associated with relational strength. Ledbetter ([2009](https://www.tandfonline.com/doi/full/10.1080/10410236.2016.1242032?casa_token=Cs3Ug6AgxgwAAAAA%3AywV4WhQjG-17SbYUy52F1_2-aVznMi-1iPm1qdBWers3M58EosaXMZdTOCpZvUPbt4z3zyda1E-i#))
-            examined the detailed patterns of multiplexity and found that media use
-            patterns predicted friendship interdependence. Vergeer and Pelzer ([2009](https://www.tandfonline.com/doi/full/10.1080/10410236.2016.1242032?casa_token=Cs3Ug6AgxgwAAAAA%3AywV4WhQjG-17SbYUy52F1_2-aVznMi-1iPm1qdBWers3M58EosaXMZdTOCpZvUPbt4z3zyda1E-i#))
-            showed that offline network capital---measured by communication
-            face-to-face or on the phone---was associated with higher social support
-            and lower loneliness, while online network capital---measured by
-            communication via e-mail, chat, or instant messaging---did not show these
-            benefits.
+        -   Haythornthwaite ([2005](https://www.tandfonline.com/doi/full/10.1080/10410236.2016.1242032?casa_token=Cs3Ug6AgxgwAAAAA%3AywV4WhQjG-17SbYUy52F1_2-aVznMi-1iPm1qdBWers3M58EosaXMZdTOCpZvUPbt4z3zyda1E-i#)) suggested that communication multiplexity is associated with relational strength. Ledbetter ([2009](https://www.tandfonline.com/doi/full/10.1080/10410236.2016.1242032?casa_token=Cs3Ug6AgxgwAAAAA%3AywV4WhQjG-17SbYUy52F1_2-aVznMi-1iPm1qdBWers3M58EosaXMZdTOCpZvUPbt4z3zyda1E-i#)) examined the detailed patterns of multiplexity and found that media use patterns predicted friendship interdependence. Vergeer and Pelzer ([2009](https://www.tandfonline.com/doi/full/10.1080/10410236.2016.1242032?casa_token=Cs3Ug6AgxgwAAAAA%3AywV4WhQjG-17SbYUy52F1_2-aVznMi-1iPm1qdBWers3M58EosaXMZdTOCpZvUPbt4z3zyda1E-i#)) showed that offline network capital---measured by communication face-to-face or on the phone---was associated with higher social support and lower loneliness, while online network capital---measured by communication via e-mail, chat, or instant messaging---did not show these benefits.

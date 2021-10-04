@@ -35,7 +35,6 @@ sna_ego_list_for_model<- sna_ego_list_for_model %>%
          log_density= log(density))
 
 
-str(sna_ego_list_for_model)
 #age as number
 sna_ego_list_for_model$age <- as.numeric(sna_ego_list_for_model$age)
 ```
@@ -49,6 +48,7 @@ sna_ego_list_for_model$age <- as.numeric(sna_ego_list_for_model$age)
 * * log_density
 * Total SL Visits (total_visits)
 * * log_total_visits
+* Entropy (network alter diversity of closeness)
 
 ## Predictors
 * Age (age)
@@ -60,6 +60,7 @@ sna_ego_list_for_model$age <- as.numeric(sna_ego_list_for_model$age)
 * * log_density
 * Deceased (deceased), if patient passed after study recruitment
 * Designated Palliative Patient Status (dpp): status indicated by Streetlight program for patients in major disease populations (not other) patients who have been admitted 3x or more, or patients who are followed by pal care team
+* network alter diversity
 * Project Team
 * Gender
 
@@ -72,10 +73,15 @@ sna_ego_list_for_model$age <- as.numeric(sna_ego_list_for_model$age)
 ## outcome distributions
 ```{r, describe_vars}
 outcomes <- sna_ego_list_for_model %>% 
-  select(network_size,avg_alter_freq,total_visits,density)
+  select(network_size,avg_alter_freq,total_visits,density,entropy)
 outcomes_plot <- hist.data.frame(outcomes, na.big = TRUE)
 
-hist(outcomes$density,breaks=10)
+outcomes_log<- sna_ego_list_for_model %>% 
+  select(network_size,
+         avg_alter_freq,
+         total_visits,
+         density,
+         entropy)
 ```
 
 ```{r, predictor_plots}
@@ -463,5 +469,92 @@ summary(log_total_visits_log_density_adjusted)
 confint(log_total_visits_log_density_adjusted)
 
 ```
+
+```{r, lm_on_log_total_visits}
+#Crude models
+#log_total_visits_models
+log_total_visits_age_crude <- lm(log_total_visits ~ age, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+
+summary(log_total_visits_age_crude)
+confint(log_total_visits_age_crude)
+
+#LOS
+log_total_visits_log_total_los_crude <- lm(log_total_visits ~ log_total_los, data =sna_ego_list_for_model)  
+summary(log_total_visits_log_total_los_crude)
+confint(log_total_visits_log_total_los_crude)
+
+#admissions
+log_total_visits_admissions_crude <- lm(log_total_visits ~ log_total_admissions, data =sna_ego_list_for_model)  
+summary(log_total_visits_admissions_crude)
+confint(log_total_visits_admissions_crude)
+
+#log_total_visits super high predictor of network size-- may be colinearity here 
+# It will necessarily become more sparse as number of connections increases
+
+#deceased
+log_total_visits_deceased_crude <- lm(log_total_visits ~ deceased, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_deceased_crude)
+confint(log_total_visits_deceased_crude)
+#dpp
+log_total_visits_dpp_crude <- lm(log_total_visits ~ dpp, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_dpp_crude)
+confint(log_total_visits_dpp_crude)
+
+#project_team
+log_total_visits_project_team_crude <- lm(log_total_visits ~ project_team, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_project_team_crude)
+
+confint(log_total_visits_project_team_crude)
+
+#gender
+log_total_visits_gender_crude <- lm(log_total_visits ~ gender, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(log_total_visits_gender_crude)
+confint(log_total_visits_gender_crude)
+#both predict? that doesn't make sense...
+
+
+
+```
+# Adjusted alter closeness shannon entropy models
+```{r,total_sl_adjusted} 
+#### ADJUSTED MODELS ######
+#entropy_models
+entropy_age_adjusted <- lm(entropy ~ age + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of total admissions and los
+
+summary(entropy_age_adjusted)
+confint(entropy_age_adjusted)
+
+#LOS and admissions
+entropy_los_adjusted <- lm(entropy ~ log_total_los  + log_total_admissions, data =sna_ego_list_for_model)  
+summary(entropy_los_adjusted)
+confint(entropy_los_adjusted)
+
+
+#deceased
+entropy_deceased_adjusted <- lm(entropy ~ deceased + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(entropy_deceased_adjusted)
+confint(entropy_deceased_adjusted)
+#dpp
+entropy_dpp_adjusted <- lm(entropy ~ dpp + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(entropy_dpp_adjusted)
+confint(entropy_dpp_adjusted)
+
+#project_team
+entropy_project_team_adjusted <- lm(entropy ~ project_team + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(entropy_project_team_adjusted)
+confint(entropy_project_team_adjusted)
+
+#gender
+entropy_gender_adjusted <- lm(entropy ~ gender + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(entropy_gender_adjusted)
+confint(entropy_gender_adjusted)
+#log density
+# This may be tied to the fact that each visit is a chance for a tie to be made, so more visits = higher denominator of volunteers + also higher chance at co-visits so unsure what to make
+entropy_log_density_adjusted <- lm(entropy ~ log_density + log_total_los + log_total_admissions, data =subset(sna_ego_list_for_model,density>0))
+summary(entropy_log_density_adjusted)
+confint(entropy_log_density_adjusted)
+
+```
+
 Interpretation guide for betas
 https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqhow-do-i-interpret-a-regression-model-when-some-variables-are-log-transformed/
