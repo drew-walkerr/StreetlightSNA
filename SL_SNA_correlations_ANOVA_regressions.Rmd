@@ -17,25 +17,99 @@ library("Hmisc")
 ```
 
 
-```{r}
+```{r,crude_models}
+#read data 
 sna_ego_list_for_model <- read_csv("sna_ego_list.csv")
+#factors 
+factor_vars <- c("deceased", "dpp", "project_team", "gender")
+sna_ego_list_for_model<- sna_ego_list_for_model %>% 
+       mutate_each_(funs(factor(.)),factor_vars)
 
-network_size_age <- lm(network_size ~ total_los+ project_team, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
-summary(network_size_age)
+str(sna_ego_list_for_model)
+#age as number
+sna_ego_list_for_model$age <- as.numeric(sna_ego_list_for_model$age)
 
-gender_difference <- lm(network_size ~ total_los+gender, data =sna_ego_list_for_model)
+#Crude models
+#Network_size_models
+network_size_age_crude <- lm(network_size ~ age, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
 
-density_and_repeat_visits <- lm(avg_alter_freq ~ total_los+gender, data =sna_ego_list_for_model)
-summary(density_and_repeat_visits)
+summary(network_size_age_crude)
+confint(network_size_age_crude)
 
-sna_ego_list_corr <- sna_ego_list_for_model %>% 
-  select(network_size,avg_alter_freq,max_alter_freq,age,days_in_SL,total_los,max_los,visits_per_admission,total_admissions,total_visits,density) %>% 
-  drop_na()
+#LOS
+network_size_los_crude <- lm(network_size ~ total_los, data =sna_ego_list_for_model)  
+summary(network_size_los_crude)
+confint(network_size_los_crude)
 
+#network size density 
+network_size_density_crude <- lm(network_size ~ density, data =sna_ego_list_for_model)  
+summary(network_size_density_crude)
+confint(network_size_density_crude)
 
+#density super high predictor of network size-- may be colinearity here 
+# It will necessarily become more sparse as number of connections increases
 
-corr_matrix <- rcorr(as.matrix(sna_ego_list_corr),type=c("pearson"))
+#deceased
+network_size_deceased_crude <- lm(network_size ~ deceased, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(network_size_deceased_crude)
+confint(network_size_deceased_crude)
+#dpp
+network_size_dpp_crude <- lm(network_size ~ dpp, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(network_size_dpp_crude)
+confint(network_size_dpp_crude)
 
+#project_team
+network_size_project_team_crude <- lm(network_size ~ project_team, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(network_size_project_team_crude)
 
+confint(network_size_project_team_crude)
+
+#gender
+network_size_gender_crude <- lm(network_size ~ gender, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(network_size_gender_crude)
+confint(network_size_gender_crude)
+#both predict? that doesn't make sense...
+```
+
+```{r,adjusted_models}
+#Adjusted Models
+#Network_size_models
+network_size_age_adjusted <- lm(network_size ~ age + total_los, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+
+summary(network_size_age_adjusted)
+confint(network_size_age_adjusted)
+
+#LOS
+network_size_los_adjusted <- lm(network_size ~ total_los, data =sna_ego_list_for_model)  
+summary(network_size_los_adjusted)
+confint(network_size_los_adjusted)
+
+#network size density 
+network_size_density_adjusted <- lm(network_size ~ density + total_los, data =sna_ego_list_for_model)  
+summary(network_size_density_adjusted)
+confint(network_size_density_adjusted)
+
+#density super high predictor of network size-- may be colinearity here 
+# It will necessarily become more sparse as number of connections increases
+
+#deceased
+network_size_deceased_adjusted <- lm(network_size ~ deceased + total_los, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(network_size_deceased_adjusted)
+confint(network_size_deceased_adjusted)
+#dpp
+network_size_dpp_adjusted <- lm(network_size ~ dpp + total_los, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(network_size_dpp_adjusted)
+confint(network_size_dpp_adjusted)
+
+#project_team
+network_size_project_team_adjusted <- lm(network_size ~ project_team + total_los, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(network_size_project_team_adjusted)
+confint(network_size_project_team_adjusted)
+
+#gender
+network_size_gender_adjusted <- lm(network_size ~ gender + total_los, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(network_size_gender_adjusted)
+confint(network_size_gender_adjusted)
+#both predict? that doesn't make sense...
 ```
 
