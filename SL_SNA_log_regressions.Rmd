@@ -161,6 +161,11 @@ log_network_size_los_adjusted <- lm(log_network_size ~ log_total_los  + log_tota
 summary(log_network_size_los_adjusted)
 confint(log_network_size_los_adjusted)
 
+#admissions
+log_network_size_admissions_adjusted <- lm(log_network_size ~ log_total_admissions + log_total_los, data =sna_ego_list_for_model)  
+summary(log_network_size_admissions_adjusted)
+confint(log_network_size_admissions_adjusted)
+
 #network size log_density 
 
 #log_density super high predictor of network size-- may be colinearity here 
@@ -513,6 +518,50 @@ confint(log_total_visits_gender_crude)
 #both predict? that doesn't make sense...
 
 
+
+```
+
+#  Crude shannon entropy models
+```{r,crude_entropy} 
+#### ADJUSTED MODELS ######
+#entropy_models
+entropy_age <- lm(entropy ~ age, data =sna_ego_list_for_model)    #This model adds in the covariate effect of total admissions and los
+
+summary(entropy_age)
+confint(entropy_age)
+
+#LOS and admissions
+entropy_los_adjusted <- lm(entropy ~ log_total_los, data =sna_ego_list_for_model)  
+summary(entropy_los_adjusted)
+confint(entropy_los_adjusted)
+
+entropy_log_total_admissions <- lm(entropy ~ log_total_admissions, data =sna_ego_list_for_model)  
+summary(entropy_log_total_admissions)
+confint(entropy_log_total_admissions)
+
+#deceased
+entropy_deceased <- lm(entropy ~ deceased, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(entropy_deceased)
+confint(entropy_deceased)
+#dpp
+entropy_dpp <- lm(entropy ~ dpp, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(entropy_dpp)
+confint(entropy_dpp)
+
+#project_team
+entropy_project_team <- lm(entropy ~ project_team, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(entropy_project_team)
+confint(entropy_project_team)
+
+#gender
+entropy_gender <- lm(entropy ~ gender, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
+summary(entropy_gender)
+confint(entropy_gender)
+#log density
+# This may be tied to the fact that each visit is a chance for a tie to be made, so more visits = higher denominator of volunteers + also higher chance at co-visits so unsure what to make
+entropy_log_density <- lm(entropy ~ log_density, data =subset(sna_ego_list_for_model,density>0))
+summary(entropy_log_density)
+confint(entropy_log_density)
 
 ```
 # Adjusted alter closeness shannon entropy models
