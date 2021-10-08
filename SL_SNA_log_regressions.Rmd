@@ -33,7 +33,7 @@ sna_ego_list_for_model<- sna_ego_list_for_model %>%
          log_avg_alter_freq = log(avg_alter_freq),
          log_total_visits = log(total_visits),
          log_density= log(density))
-
+sna_ego_list_for_model <- within(sna_ego_list_for_model, project_team <- relevel(project_team, ref = "None"))
 
 #age as number
 sna_ego_list_for_model$age <- as.numeric(sna_ego_list_for_model$age)
@@ -48,7 +48,7 @@ sna_ego_list_for_model$age <- as.numeric(sna_ego_list_for_model$age)
 * * log_density
 * Total SL Visits (total_visits)
 * * log_total_visits
-* Entropy (network alter diversity of closeness)
+* Entropy (network alter diversity of closeness)-- shannons entropy of volunteer repeat visits-- showing diversity of support sources (weak and strong ties offer advantages for different situations, good to have mix in network. Higher score=greater mix. Log transformed already, so not doing it twice!)
 
 ## Predictors
 * Age (age)
@@ -430,7 +430,7 @@ confint(log_total_visits_gender_crude)
 
 ```
 # Adjusted total SL visit models
-```{r,total_sl_adjusted} 
+```{r,total_sl_visit_adjusted} 
 #### ADJUSTED MODELS ######
 #log_total_visits_models
 log_total_visits_age_adjusted <- lm(log_total_visits ~ age + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of total admissions and los
@@ -470,7 +470,7 @@ confint(log_total_visits_log_density_adjusted)
 
 ```
 
-```{r, lm_on_log_total_visits}
+```{r, lm_on_log_total_visits_crude}
 #Crude models
 #log_total_visits_models
 log_total_visits_age_crude <- lm(log_total_visits ~ age, data =sna_ego_list_for_model)    #This model adds in the covariate effect of th
@@ -516,7 +516,7 @@ confint(log_total_visits_gender_crude)
 
 ```
 # Adjusted alter closeness shannon entropy models
-```{r,total_sl_adjusted} 
+```{r,adjusted_entropy} 
 #### ADJUSTED MODELS ######
 #entropy_models
 entropy_age_adjusted <- lm(entropy ~ age + log_total_los + log_total_admissions, data =sna_ego_list_for_model)    #This model adds in the covariate effect of total admissions and los
