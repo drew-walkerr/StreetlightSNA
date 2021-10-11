@@ -607,3 +607,13 @@ confint(entropy_log_density_adjusted)
 
 Interpretation guide for betas
 https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faqhow-do-i-interpret-a-regression-model-when-some-variables-are-log-transformed/
+
+
+# Table 1 
+
+
+```{r, table1}
+
+table1(~age + total_los+total_admissions+ dpp+ deceased+ gender+ network_size+ avg_alter_freq+ total_visits+ density+ entropy |project_team ,data=sna_ego_list_for_model)
+```
+
