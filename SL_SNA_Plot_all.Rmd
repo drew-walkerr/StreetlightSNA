@@ -168,8 +168,22 @@ ig
 #1. ego list object
 ego_list <- read_csv("Patient Ego List Final for SPSS.csv")
 ego_list <- ego_list %>% 
-  mutate(across(where(is.character), as.factor)) %>% 
-  rename(ego_ID = `EGO Number`)
+  mutate(across(where(is.character), as.factor)) %>%
+  rename(ego_ID = `EGO Number`,
+         `Volunteer Network Size`=`Network Size`,
+         `Average Volunteer Repeat Visits`=`RQ 4Average alter closeness`,
+         `Volunteer Repeat Visits Max`=`RQ4alter closeness max`,
+         `Volunteer Repeat Visits SD`=`RQ 4Alter Closeness SD`,
+         `Volunteer Repeat Visits Median`=`RQ4alter median closeness`,
+         `Streetlight Major Disease Population`=`RQ5 Project Team`,
+         `Days since joining Streetlight`=`RQ1 Time in SL`,
+         `Average Length of Stay`=`RQ1 Average LOS`,
+         `Total Length of Stay`=`RQ1Total LOS`,
+         `Max Length of Stay`=`RQ1 Max LOS`,
+         `Visits per Admission`=`RQ2 VISITS PER ADMISSION`,
+         `Total Number of Hospital Admissions`=`RQ1 Total Admissions`,
+         `Total Streetlight Program Visits`=`RQ1Total Visits`)
+         
 
 unique_ego_list <- ego_list %>% 
   distinct(ego_ID)
@@ -230,27 +244,23 @@ diversity_entropy$.egoID<-  as.double(diversity_entropy$.egoID)
 
 sna_ego_list_diversity <- left_join(sna_ego_list,diversity_entropy, by =c("ego_ID"=".egoID"))
 
-sna_ego_list_for_model <- sna_ego_list %>% 
-  select(ego_ID,
-         network_size=`Network Size`,
-         avg_alter_freq=`RQ 4Average alter closeness`,
-         max_alter_freq=`RQ4alter closeness max`,
-         sd_alter_freq=`RQ 4Alter Closeness SD`,
-         med_alter_freq=`RQ4alter median closeness`,
-         project_team=`RQ5 Project Team`,
-         gender=Gender,
-         deceased=Deceased,
-         age=Age,
-         days_in_SL=`RQ1 Time in SL`,
-         avg_los=`RQ1 Average LOS`,
-         total_los=`RQ1Total LOS`,
-         max_los=`RQ1 Max LOS`,
-         visits_per_admission=`RQ2 VISITS PER ADMISSION`,
-         total_admissions=`RQ1 Total Admissions`,
-         total_visits=`RQ1Total Visits`,
-         density,
-         dpp=`DPP?`,
-         entropy)
+ego_list <- sna_ego_list_diversity %>% 
+  rename(`Network Density`=density,
+         `Network Diversity in Repeat Visits`=entropy)
+
+#remake egor model with density and diversity
+egor.obj <- egor::threefiles_to_egor(alters = alter_attr, 
+                                     egos = ego_list, 
+                               edges = tie_list_2, 
+                               ID.vars = list(ego = "ego_ID", 
+                                              alter ="vol_ID2",
+                                              source = "from", 
+                                              target = "to"))
+
+egor.obj
+
+
+sna_ego_list_for_model <- ego_list
 
 
 write_csv(sna_ego_list_for_model,"sna_ego_list.csv")
@@ -261,6 +271,24 @@ names(egor.obj$alter)
 
 save(egor.obj, ego_list,alter_attr,tie_list_2, file="SL_SNA_egor.rda")
 
+
+ego_list$`Network Diversity in Repeat Visits`<- signif(ego_list$`Network Diversity in Repeat Visits`,digits=2) 
+
+ego_list$`Network Density` <- signif(ego_list$`Network Density`,digits=2) 
+
+ego_list$`Average Volunteer Repeat Visits` <- signif(ego_list$`Average Volunteer Repeat Visits`,digits=2) 
+
+
+egor.obj <- egor::threefiles_to_egor(alters = alter_attr, 
+                                     egos = ego_list, 
+                               edges = tie_list_2, 
+                               ID.vars = list(ego = "ego_ID", 
+                                              alter ="vol_ID2",
+                                              source = "from", 
+                                              target = "to"))
+
+egor.obj
+
 #edit name list for a few entries-- see PDF output for directors
 ```
 
@@ -268,6 +296,7 @@ save(egor.obj, ego_list,alter_attr,tie_list_2, file="SL_SNA_egor.rda")
 egor vis
 ```{r, shiny_vis}
 egor::egor_vis_app(egor.obj)
-
+library(table1)
+table1(~`Volunteer Network Size`|`Streetlight Major Disease Population`, data = ego_list)
 ```
 
